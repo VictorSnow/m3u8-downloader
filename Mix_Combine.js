@@ -566,6 +566,7 @@
             if (m3u8Target) {
                 console.log("set url", m3u8Target);
                 vm.url = m3u8Target;
+                vm.downloadKK();
             }
         })
     }
