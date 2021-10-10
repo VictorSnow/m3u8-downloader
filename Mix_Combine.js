@@ -61,7 +61,8 @@
                     finishList: [], // 下载完成项目
                     tsUrlList: [], // ts URL数组
                     mediaFileList: [], // 下载的媒体数组
-                    minDlThread: 3,
+                    minDlThread: 3, // 最少的下载线程
+                    dlThread: 0, // 当前的下载线程
                     rangeDownload: { // 特定范围下载
                         isShowRange: false, // 是否显示范围下载
                         startSegment: '', // 起始片段
@@ -153,13 +154,6 @@
                         this.getM3U8();
                     }
                 },
-
-                // 解析为 mp4 下载
-                //getMP4() {
-                //    this.isGetMP4 = true
-                //    this.getM3U8()
-                //},
-
                 // 获取在线文件
                 getM3U8() {
                     if (!this.url) {
@@ -284,15 +278,18 @@
                         let isPause = this.isPause // 使用另一个变量来保持下载前的暂停状态，避免回调后没修改
                         let index = this.downloadIndex
                         this.downloadIndex++
+                        this.dlThread++;
                         if (this.finishList[index] && this.finishList[index].status === '') {
                             this.ajax({
                                 url: this.tsUrlList[index],
                                 type: 'file',
                                 success: (file) => {
+                                    this.dlThread--;
                                     this.dealTS(file, index, () => this.downloadIndex < this.rangeDownload.endSegment && !isPause && download())
                                 },
                                 fail: () => {
-                                    this.errorNum++
+                                    this.errorNum++;
+                                    this.dlThread--;
                                     this.finishList[index].status = 'error'
                                     if (this.downloadIndex < this.rangeDownload.endSegment) {
                                         !isPause && download()
@@ -305,7 +302,7 @@
                     }
 
                     // 建立多少个 ajax 线程
-                    for (let i = 0; i < Math.min(this.minDlThread, this.rangeDownload.targetSegment - this.finishNum); i++) {
+                    for (let i = this.dlThread; i < Math.min(this.minDlThread, this.rangeDownload.targetSegment - this.finishNum); i++) {
                         download(i)
                     }
                 },
@@ -327,53 +324,10 @@
                     //})
                 },
 
-                // 转码为 mp4
-                /*
-                conversionMp4(data, index, callback) {
-                    if (this.isGetMP4) {
-                        let transmuxer = new muxjs.Transmuxer({
-                            keepOriginalTimestamps: true,
-                            duration: parseInt(this.durationSecond),
-                        });
-                        transmuxer.on('data', segment => {
-                            if (index === this.rangeDownload.startSegment - 1) {
-                                let data = new Uint8Array(segment.initSegment.byteLength + segment.data.byteLength);
-                                data.set(segment.initSegment, 0);
-                                data.set(segment.data, segment.initSegment.byteLength);
-                                callback(data.buffer)
-                            } else {
-                                callback(segment.data)
-                            }
-                        })
-                        transmuxer.push(new Uint8Array(data));
-                        transmuxer.flush();
-                    } else {
-                        callback(data)
-                    }
-                },*/
-
                 // 暂停与恢复
                 togglePause() {
                     this.isPause = !this.isPause
                     !this.isPause && this.retryAll()
-                },
-
-                // 重新下载某个片段
-                retry(index) {
-                    if (this.finishList[index].status === 'error') {
-                        this.finishList[index].status = ''
-                        this.ajax({
-                            url: this.tsUrlList[index],
-                            type: 'file',
-                            success: (file) => {
-                                this.errorNum--
-                                this.dealTS(file, index)
-                            },
-                            fail: () => {
-                                this.finishList[index].status = 'error'
-                            }
-                        })
-                    }
                 },
 
                 // 重新下载所有错误片段
@@ -487,9 +441,14 @@
         }
         window._hadResetAjax = true
 
-        ah.hook({
+        window.ah.hook({
             open: (args, xhr) => {
                 var url = args[1];
+                // 设置好timeout 120s
+                if (xhr && xhr.timeout == 0) {
+                    xhr.timeout = 120 * 1000;
+                }
+
                 //url && url.indexOf('.m3u8') > 0 &&
                 //console.log("ajax url", url)
                 if (url && url.indexOf('.m3u8') > 0) {
@@ -515,15 +474,6 @@
                 }
             }
         })
-
-        // hook hls
-        //try {
-        //    if (window.Hls && Hls.DefaultConfig.loader) {
-        //        Hls.DefaultConfig.loader = XMLHttpRequest;
-        //        console.log("hls xmlhttprequest replaced success");
-        //    }
-        //} catch (err) {
-        //}
     }
 
     function appendDom() {
