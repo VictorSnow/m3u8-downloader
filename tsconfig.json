@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "noImplicitAny": false,
+    "module": "commonjs",
+    "target": "es5",
+    //"jsx": "react",
+    "allowJs": true,
+    "lib": ["dom", "es2015"],
+    "moduleResolution": "node",
+    "emitDeclarationOnly": false,
+    "strict": false,
+    "strictNullChecks": true,
+    "allowSyntheticDefaultImports": true
+  }
+}

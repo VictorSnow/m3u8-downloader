@@ -10,41 +10,17 @@
 // @run-at document-start
 // ==/UserScript==
 
+import parseQueryParameters from 'parse-url-query-params';
+import { createApp } from "vue";
+import AESDecryptor from "hls.js/src/crypt/aes-decryptor";
+import {hook} from "ajax-hook";
+
 (function () {
     var m3u8Target = ''
     var originXHR = window.XMLHttpRequest
 
-    var rootDownloadArea = `
-      <section id="___m3u8-downloader" v-cloak>        
-        <div style="
-          margin-top: 6px;
-          padding: 6px 10px ;
-          font-size: 18px;
-          color: white;
-          cursor: pointer;
-          border-radius: 4px;
-          border: 1px solid #eeeeee;
-          background-color: #3D8AC7;
-          position:fixed;
-          top: 20px;
-          right: 20px;
-          max-width: 200px;
-          overflow: hidden;
-          z-index: 9999;
-        " @click="downloadKK()">
-            <p v-if="finishNum === rangeDownload.targetSegment && rangeDownload.targetSegment > 0" class="disable">下载完成</p>
-            <p v-show="false">
-                <input type="text" v-model="url" :disabled="downloading" placeholder="请输入 m3u8 链接" style="max-width: 140px;">
-            </p>
-            <p>进度:{{finishNum}}-<b style="color:red">{{errorNum}}</b>/{{rangeDownload.targetSegment}}</p>
-        </div>
-      </section>
-  `
-
     function initUI() {
-        window.vm = new Vue({
-            el: '#___m3u8-downloader',
-
+        let app = createApp({
             data() {
                 return {
                     url: '', // 在线链接
@@ -82,33 +58,31 @@
                     },
                 }
             },
-
-            //created() {
-                //this.getSource();
-                //document.getElementById('loading') && document.getElementById('loading').remove()
-                //window.addEventListener('keyup', this.onKeyup)
-            //},
-
-            //beforeDestroy() {
-                //window.removeEventListener('keyup', this.onKeyup)
-            //},
-
+            template: `<div>
+        <div style="
+          margin-top: 6px;
+          padding: 6px 10px ;
+          font-size: 18px;
+          color: white;
+          cursor: pointer;
+          border-radius: 4px;
+          border: 1px solid #eeeeee;
+          background-color: #3D8AC7;
+          position:fixed;
+          top: 20px;
+          right: 20px;
+          max-width: 200px;
+          overflow: hidden;
+          z-index: 9999;
+        " @click="downloadKK()">
+            <p v-if="finishNum === rangeDownload.targetSegment && rangeDownload.targetSegment > 0" class="disable">下载完成</p>
+            <p v-show="false">
+                <input type="text" v-model="url" :disabled="downloading" placeholder="请输入 m3u8 链接" style="max-width: 140px;">
+            </p>
+            <p>进度:{{finishNum}}-<b style="color:red">{{errorNum}}</b>/{{rangeDownload.targetSegment}}</p>
+        </div>
+      </div>`,
             methods: {
-                // 获取链接中携带的资源链接
-                //getSource() {
-                //    let {href} = location
-                //    if (href.indexOf('?source=') > -1) {
-                //        this.url = href.split('?source=')[1]
-                //    }
-                //},
-
-                // 退出弹窗
-                //onKeyup(event) {
-                //    if (event.keyCode === 13) { // 键入ESC
-                //        this.getM3U8()
-                //    }
-                //},
-
                 // ajax 请求
                 ajax(options) {
                     options = options || {};
@@ -195,15 +169,15 @@
                             //    this.rangeDownload.targetSegment = this.tsUrlList.length
                             //    return
                             //} else {
-                                let startSegment = Math.max(this.rangeDownload.startSegment || 1, 1) // 最小为 1
-                                let endSegment = Math.max(this.rangeDownload.endSegment || this.tsUrlList.length, 1)
-                                startSegment = Math.min(startSegment, this.tsUrlList.length) // 最大为 this.tsUrlList.length
-                                endSegment = Math.min(endSegment, this.tsUrlList.length)
-                                this.rangeDownload.startSegment = Math.min(startSegment, endSegment)
-                                this.rangeDownload.endSegment = Math.max(startSegment, endSegment)
-                                this.rangeDownload.targetSegment = this.rangeDownload.endSegment - this.rangeDownload.startSegment + 1
-                                this.downloadIndex = this.rangeDownload.startSegment - 1
-                                this.downloading = true
+                            let startSegment = Math.max(this.rangeDownload.startSegment || 1, 1) // 最小为 1
+                            let endSegment = Math.max(this.rangeDownload.endSegment || this.tsUrlList.length, 1)
+                            startSegment = Math.min(startSegment, this.tsUrlList.length) // 最大为 this.tsUrlList.length
+                            endSegment = Math.min(endSegment, this.tsUrlList.length)
+                            this.rangeDownload.startSegment = Math.min(startSegment, endSegment)
+                            this.rangeDownload.endSegment = Math.max(startSegment, endSegment)
+                            this.rangeDownload.targetSegment = this.rangeDownload.endSegment - this.rangeDownload.startSegment + 1
+                            this.downloadIndex = this.rangeDownload.startSegment - 1
+                            this.downloading = true
                             //}
 
                             // 获取需要下载的 MP4 视频长度
@@ -311,16 +285,16 @@
                 dealTS(file, index, callback) {
                     const data = this.aesConf.uri ? this.aesDecrypt(file, index) : file
                     //this.conversionMp4(data, index, (afterData) => { // mp4 转码
-                        this.mediaFileList[index - this.rangeDownload.startSegment + 1] = data // 判断文件是否需要解密
-                        // 有可能下载同一段文件
-                        if (this.finishList[index].status != 'finish') {
-                            this.finishList[index].status = 'finish'
-                            this.finishNum++
-                        }
-                        if (this.finishNum === this.rangeDownload.targetSegment) {
-                            this.downloadFile(this.mediaFileList, this.formatTime(this.beginTime, 'YYYY_MM_DD hh_mm_ss'))
-                        }
-                        callback && callback()
+                    this.mediaFileList[index - this.rangeDownload.startSegment + 1] = data // 判断文件是否需要解密
+                    // 有可能下载同一段文件
+                    if (this.finishList[index].status != 'finish') {
+                        this.finishList[index].status = 'finish'
+                        this.finishNum++
+                    }
+                    if (this.finishNum === this.rangeDownload.targetSegment) {
+                        this.downloadFile(this.mediaFileList, this.formatTime(this.beginTime, 'YYYY_MM_DD hh_mm_ss'))
+                    }
+                    callback && callback()
                     //})
                 },
 
@@ -347,12 +321,18 @@
                     this.tips = 'ts 碎片整合中，请留意浏览器下载'
                     let fileBlob = null
                     let a = document.createElement('a')
+
+                    // 使用可能的文件名
+                    if (this.getFilename()) {
+                        fileName = this.getFilename();
+                    }
+
                     //if (this.isGetMP4) {
                     //    fileBlob = new Blob(fileDataList, {type: 'video/mp4'}) // 创建一个Blob对象，并设置文件的 MIME 类型
                     //    a.download = fileName + '.mp4'
                     //} else {
-                        fileBlob = new Blob(fileDataList, {type: 'video/MP2T'}) // 创建一个Blob对象，并设置文件的 MIME 类型
-                        a.download = fileName + '.ts'
+                    fileBlob = new Blob(fileDataList, {type: 'video/mp4'}) // 创建一个Blob对象，并设置文件的 MIME 类型
+                    a.download = fileName + '.mp4'
                     //}
                     a.href = URL.createObjectURL(fileBlob)
                     a.style.display = 'none'
@@ -360,7 +340,16 @@
                     a.click()
                     a.remove()
                 },
-
+                getFilename() {
+                    // 使用可能的文件名
+                    if (location.search) {
+                        let prsedUrl = parseQueryParameters(location.href);
+                        if (prsedUrl.viewkey) {
+                            return prsedUrl.viewkey;
+                        }
+                    }
+                    return '';
+                },
                 // 格式化时间
                 formatTime(date, formatStr) {
                     const formatType = {
@@ -393,7 +382,10 @@
                     this.tips = 'm3u8 视频在线提取工具';
                 },
             }
-        })
+        });
+
+        let vm = app.mount('#___m3u8-downloader');
+        return vm;
     }
 
     function ajax(options) {
@@ -441,7 +433,7 @@
         }
         window._hadResetAjax = true
 
-        window.ah.hook({
+        hook({
             open: (args, xhr) => {
                 var url = args[1];
                 // 设置好timeout 120s
@@ -507,14 +499,14 @@
         m3u8Append.addEventListener('click', function () {
             m3u8Append.style.display = 'none';
 
-            let container = document.createElement('div')
-            container.innerHTML = `${rootDownloadArea}`
-            container.style.zIndex = 9999;
-            document.body.appendChild(container);
+            let elem = document.createElement('div')
+            elem.id = "___m3u8-downloader";
+            document.body.appendChild(elem);
 
-            initUI();
+            let vm = initUI();
+            window.vm = vm;
             if (m3u8Target) {
-                console.log("set url", m3u8Target);
+                console.log("set url", m3u8Target, vm.getFilename());
                 vm.url = m3u8Target;
                 vm.downloadKK();
             }
