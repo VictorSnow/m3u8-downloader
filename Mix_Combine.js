@@ -134,7 +134,8 @@ import {hook} from "ajax-hook";
                         alert('请输入链接')
                         return
                     }
-                    if (this.url.toLowerCase().indexOf('.m3u8') === -1) {
+                    if (this.url.toLowerCase().indexOf('.m3u8') === -1 &&
+                        this.url.toLowerCase().indexOf('m3u8.php') === -1) {
                         alert('链接有误，请重新输入')
                         return
                     }
@@ -348,7 +349,12 @@ import {hook} from "ajax-hook";
                             return prsedUrl.viewkey;
                         }
                     }
-                    return '';
+
+                    if ($ && $('h1').text() != '') {
+                        return $('h1').text();
+                    }
+
+                    return document.title || '';
                 },
                 // 格式化时间
                 formatTime(date, formatStr) {
