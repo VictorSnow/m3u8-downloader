@@ -154,7 +154,11 @@ import {hook} from "ajax-hook";
 
                             // 提取 ts 视频片段地址
                             m3u8Str.split('\n').forEach((item) => {
-                                if (item.toLowerCase().indexOf('.ts') > -1 || item.toLowerCase().indexOf('.image') > -1) {
+                                if (item.toLowerCase().indexOf('.ts') > -1 || 
+                                    item.toLowerCase().indexOf('.image') > -1 ||
+                                    item.toLowerCase().indexOf('.gif') > -1 || 
+                                    item.toLowerCase().indexOf('.jpg') > -1
+                                    ) {
                                     this.tsUrlList.push(this.applyURL(item, this.url))
                                     this.finishList.push({
                                         title: item,
@@ -195,7 +199,8 @@ import {hook} from "ajax-hook";
                             //}
 
                             // 检测视频 AES 加密
-                            if (m3u8Str.indexOf('#EXT-X-KEY') > -1) {
+                            // 排除none
+                            if (m3u8Str.indexOf('#EXT-X-KEY') > -1 && m3u8Str.indexOf('#EXT-X-KEY:METHOD=NONE') < 0) {
                                 this.aesConf.method = (m3u8Str.match(/(.*METHOD=([^,\s]+))/) || ['', '', ''])[2]
                                 this.aesConf.uri = (m3u8Str.match(/(.*URI="([^"]+))"/) || ['', '', ''])[2]
                                 this.aesConf.iv = (m3u8Str.match(/(.*IV=([^,\s]+))/) || ['', '', ''])[2]
@@ -350,7 +355,7 @@ import {hook} from "ajax-hook";
                         }
                     }
 
-                    if ($ && $('h1').text() != '') {
+                    if (typeof $ != 'undefined' && $('h1').text() != '') {
                         return $('h1').text();
                     }
 
@@ -422,7 +427,10 @@ import {hook} from "ajax-hook";
         ajax({
             url,
             success: (fileStr) => {
-                if (fileStr.indexOf('.ts') > -1) {
+                if (fileStr.indexOf('.ts') > -1 ||
+                    fileStr.indexOf('.gif') > -1 ||
+                    fileStr.indexOf('.jpg') > -1
+                    ) {
                     appendDom()
                     m3u8Target = url
                 }
