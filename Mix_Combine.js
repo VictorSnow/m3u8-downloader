@@ -356,7 +356,11 @@ import {hook} from "ajax-hook";
                     }
 
                     if (typeof $ != 'undefined' && $('h1').text() != '') {
-                        return $('h1').text();
+                        return $('h2').text();
+                    }
+
+                    if (typeof $ != 'undefined' && $('h2').text() != '') {
+                        return $('h2').text();
                     }
 
                     return document.title || '';
@@ -480,6 +484,19 @@ import {hook} from "ajax-hook";
                 }
             }
         })
+
+        if (typeof DPlayer != 'undefined') {
+            let inv = setInterval(function(){
+                let dp = document.querySelector(".dplayer");
+                if (dp) {
+                    let u = dp.getAttribute('data-url');
+                    if (u) {
+                        forceDownload(u);
+                        clearInterval(inv);
+                    }
+                }
+            }, 3000);
+        }
     }
 
     function appendDom() {
@@ -527,6 +544,7 @@ import {hook} from "ajax-hook";
         })
     }
 
+    // 检查是否有Dplayer
     window.forceDownload = function (m3u8) {
         m3u8Target = m3u8;
         appendDom();
