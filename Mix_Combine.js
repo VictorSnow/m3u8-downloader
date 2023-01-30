@@ -497,6 +497,12 @@ import {hook} from "ajax-hook";
                 }
             }, 3000);
         }
+
+        if (typeof Hls != 'undefined') {
+            // 刷新
+            Hls.DefaultConfig.loader = XMLHttpRequest;
+            console.log("update hls loader");
+        }
     }
 
     function appendDom() {
