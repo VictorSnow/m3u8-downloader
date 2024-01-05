@@ -356,14 +356,17 @@ import {hook} from "ajax-hook";
                     }
 
                     if (typeof $ != 'undefined' && $('h1').text() != '') {
-                        return $('h2').text();
+                        return $('h1').text();
                     }
 
                     if (typeof $ != 'undefined' && $('h2').text() != '') {
                         return $('h2').text();
                     }
 
-                    return document.title || '';
+                    return document.title || 
+                        document.querySelector('h1')?.textContent.trim() || 
+                        document.querySelector('h2')?.textContent.trim() ||
+                        '';
                 },
                 // 格式化时间
                 formatTime(date, formatStr) {
@@ -425,26 +428,6 @@ import {hook} from "ajax-hook";
         xhr.send(null);
     }
 
-    // 检测 m3u8 链接的有效性
-    function checkM3u8Url(url) {
-        console.log("check m3u8", url);
-        ajax({
-            url,
-            success: (fileStr) => {
-                if (fileStr.indexOf('.ts') > -1 ||
-                    fileStr.indexOf('.gif') > -1 ||
-                    fileStr.indexOf('.jpg') > -1
-                    ) {
-                    appendDom()
-                    m3u8Target = url
-                }
-            },
-            error: (err) => {
-                console.log("m3u8 加载失败", err);
-            }
-        })
-    }
-
     function resetAjax() {
         if (window._hadResetAjax) { // 如果已经重置过，则不再进入。解决开发时局部刷新导致重新加载问题
             return
@@ -453,18 +436,18 @@ import {hook} from "ajax-hook";
 
         hook({
             open: (args, xhr) => {
-                var url = args[1];
+                //var url = args[1];
                 // 设置好timeout 120s
-                if (xhr && xhr.timeout == 0) {
-                    xhr.timeout = 120 * 1000;
-                }
+                //if (xhr && xhr.timeout == 0) {
+                //    xhr.timeout = 120 * 1000;
+                //}
 
                 //url && url.indexOf('.m3u8') > 0 &&
                 //console.log("ajax url", url)
-                if (url && url.indexOf('.m3u8') > 0) {
+                //if (url && url.indexOf('.m3u8') > 0) {
                     //checkM3u8Url(url);
-                    console.log('Possible m3u8 url:', url);
-                }
+                    //console.log('Possible m3u8 url:', url);
+                //}
             },
             onreadystatechange: function(xhr, event) {
                 if (xhr.readyState === 4) {
@@ -475,9 +458,18 @@ import {hook} from "ajax-hook";
 
                         if (xhr.responseType == '' || xhr.responseType == 'text') {
                             let text = xhr.responseText;
+                            let fileStr = text;
+
                             if (text && text.toUpperCase().indexOf('#EXTINF') > -1) {
                                 console.log('Checking m3u8 Video Url:', url);
-                                checkM3u8Url(url);
+                                //checkM3u8Url(url);
+                                if (fileStr.indexOf('.ts') > -1 ||
+                                    fileStr.indexOf('.gif') > -1 ||
+                                    fileStr.indexOf('.jpg') > -1
+                                    ) {
+                                    appendDom()
+                                    m3u8Target = url
+                                }
                             }
                         }
                     }
@@ -498,11 +490,11 @@ import {hook} from "ajax-hook";
             }, 3000);
         }
 
-        if (typeof Hls != 'undefined') {
+        //if (typeof Hls != 'undefined') {
             // 刷新
-            Hls.DefaultConfig.loader = XMLHttpRequest;
-            console.log("update hls loader");
-        }
+        //    Hls.DefaultConfig.loader = XMLHttpRequest;
+        //    console.log("update hls loader");
+        //}
     }
 
     function appendDom() {
